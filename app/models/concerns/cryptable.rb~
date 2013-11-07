@@ -1,0 +1,8 @@
+module Cryptable
+  def password
+  end
+
+
+  def password=(password)
+  end
+end
