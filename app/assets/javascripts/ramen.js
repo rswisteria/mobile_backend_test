@@ -24,7 +24,7 @@ var Status = NCMB.Object.extend({
   defaults: function () {
     return {
       ramen: 100,
-      rps: 0,
+      rps: 0.1,
       land: 3,
       unit: new UnitCollection()
     };
@@ -42,20 +42,31 @@ var UserView = Backbone.View.extend({
     this.compiled = _.template($('#userView').html());
     this.status = this.model.get('status');
     this.status.on('change', this.updateStatus, this);
-    //this.listenTo(status, 'change', this.updateStatus);
     this.status.fetch({
       success: function (status) {
         status.trigger('change', status);
       }
     });
+    var self = this;
+    var timeout = function () {
+      var time = +new Date();
+      var ramen = self.status.get('ramen');
+      var rps = self.status.get('rps');
+      ramen += rps;
+      self.status.set('ramen', ramen);
+      var end_time = +new Date();
+      var span = 1000 - (end_time - time);
+      setTimeout(timeout, span);
+    };
+    setTimeout(timeout, 1000);
   },
 
   updateStatus: function (status) {
-    this.$('#ramen_count').text(status.get('ramen'));
+    this.$('#ramen_count').text(Math.floor(status.get('ramen')));
     this.$('#rps').text(status.get('rps'));
     this.$('#land_count').text(status.get('land'));
   },
-  
+
   render: function () {
     this.$el.html(this.compiled({ user: this.model, status: this.model.get('status') }));
     return this;
