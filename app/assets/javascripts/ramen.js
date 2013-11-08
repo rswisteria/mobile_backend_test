@@ -1,12 +1,64 @@
 NCMB.initialize("7517e985ac2705dd41c37d8eab79c9915beb77a5182e1b4788676d0e6a8b13b0", "4ebce9c3b3ae2dd0902a17a83190cf6eb155dd4474ebb9562f4681451a477e0c");
 
+var Unit = NCMB.Object.extend({
+  className: "Unit",
+  default: function () {
+    return {
+      unit_id: 0,
+      name: 'サンプル',
+      initial_cost: 1000,
+      initial_rps: 0.5,
+      per_level_cost: 1000,
+      per_level_rps: 0.1
+    };
+  }
+});
+
+var UnitCollection = NCMB.Object.extend({
+  className: "UnitCollection",
+  model: Unit
+});
+
 var Status = NCMB.Object.extend({
-  className: "Status"
+  className: "Status",
+  defaults: function () {
+    return {
+      ramen: 100,
+      rps: 0,
+      land: 3,
+      unit: new UnitCollection()
+    };
+  }
 });
 
 var StatusView = Backbone.View.extend({
   initialize: function () {
-    this.compiled = _.template($('#statusView'));
+    this.compiled = _.template($('#statusView').html());
+  }
+});
+
+var UserView = Backbone.View.extend({
+  initialize: function () {
+    this.compiled = _.template($('#userView').html());
+    this.status = this.model.get('status');
+    this.status.on('change', this.updateStatus, this);
+    //this.listenTo(status, 'change', this.updateStatus);
+    this.status.fetch({
+      success: function (status) {
+        status.trigger('change', status);
+      }
+    });
+  },
+
+  updateStatus: function (status) {
+    this.$('#ramen_count').text(status.get('ramen'));
+    this.$('#rps').text(status.get('rps'));
+    this.$('#land_count').text(status.get('land'));
+  },
+  
+  render: function () {
+    this.$el.html(this.compiled({ user: this.model, status: this.model.get('status') }));
+    return this;
   }
 });
 
@@ -21,6 +73,18 @@ var LoginView = Backbone.View.extend({
   },
 
   onLogin: function (event) {
+    var userName = this.$('.login input[name="mail_address"]').val();
+    var password = this.$('.login input[name="password"]').val();
+    
+    NCMB.User.logIn(userName, password, {
+      success: function (user) {
+        var mainView = new MainView({ user: user });
+        $('#contents').empty();
+        $('#contents').append(mainView.render().$el);
+      },
+      error: function (user, error) {
+      }
+    });
   },
 
   onRegister: function (event) {
@@ -33,20 +97,19 @@ var LoginView = Backbone.View.extend({
     user.set("password", password);
     user.set("mailAddress", mail_address);
     user.set("nickname", nickname);
+    var status = new Status();
+    user.set('status', status);
+
+    var self = this;
 
     user.signUp(null, {
       success: function (user) {
-        // ステータスオブジェクトを作成
-        var status = new Status();
-        user.set('status', status);
-        user.save(null, {
-          success: function (user) {
-          },
-          error: function (user) {
-          }
-        });
+        var mainView = new MainView({ user: user });
+        $('#contents').empty();
+        $('#contents').append(mainView.render().$el);
       },
       error: function (user, error) {
+        alert(error);
       }
     });
   },
@@ -58,21 +121,40 @@ var LoginView = Backbone.View.extend({
 });
 
 var MainView = Backbone.View.extend({
-  initialize: function () {
-    this.compiled = _.template($('#mainView'));
-    this.status = new StatusView();
+  events: {
+    'click #logout': 'onLogout'
+  },
+
+  initialize: function (option) {
+    this.compiled = _.template($('#mainView').html());
+    this.userView = new UserView( { model: option.user } );
+  },
+
+  onLogout: function (event) {
+    NCMB.User.logOut();
+    var loginView = new LoginView();
+    $('#contents').empty();
+    $('#contents').append(loginView.render().$el);
+    return false;
   },
 
   render: function () {
     this.$el.html(this.compiled());
-    this.$('#status').append(this.status.render().$el);
+    this.$('#user').append(this.userView.render().$el);
+    return this;
   }
 });
 
 $(function() {
   var user = NCMB.User.current();
   if (user) {
-    
+    try {
+      var mainView = new MainView({ user: user });
+      $('#contents').empty();
+      $('#contents').append(mainView.render().$el);
+    } catch (x) {
+      alert(x.stack);
+    }
   } else {
     var loginView = new LoginView();
     $('#contents').append(loginView.render().$el);

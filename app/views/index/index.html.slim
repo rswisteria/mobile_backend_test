@@ -32,7 +32,27 @@ script#loginView type="text/template"
     input#register type="button" name="login" value="新規登録"
 
 script#mainView type="text/template"
-  #status
+  .logout
+    a#logout href="#" ログアウト
+  #user
 
-script#statusView type="text/template"
-  
+script#userView type="text/template"
+  fieldset
+    legend <%= user.get('nickname') %>
+    table
+      tr
+        th ラーメン
+        td style="width: 100px; text-align: right;"
+          span#ramen_count <%= status.get('ramen') %>
+        td 杯
+      tr
+        th ラーメン増加量
+        td style="text-align: right;"
+          span#rps <%= status.get('rps') %>
+        td 杯/秒
+      tr
+        th 土地
+        td style="text-align: right;"
+          span#land_count <%= status.get('land') %>
+        td つ
+
